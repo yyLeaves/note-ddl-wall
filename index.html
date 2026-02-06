@@ -152,7 +152,30 @@
                 if (el) el.style.zIndex = maxZIndex;
             }
         }
+        function toggleTask(event, itemId, text, isCurrentlyChecked) {
+            // 1. 阻止事件冒泡，防止触发卡片的 mousedown (拖拽/置顶)
+            event.stopPropagation();
 
+            const item = items.find(i => i.id === itemId);
+            if (!item) return;
+
+            const oldTask = isCurrentlyChecked ? `[x]${text}` : `[ ]${text}`;
+            const newTask = isCurrentlyChecked ? `[ ]${text}` : `[x]${text}`;
+            item.description = item.description.replace(oldTask, newTask);
+
+            localStorage.setItem('ddlItems', JSON.stringify(items));
+
+            const checkbox = event.target;
+            const lineContainer = checkbox.closest('.checkbox-line');
+
+            if (isCurrentlyChecked) {
+                lineContainer.classList.remove('completed-task');
+                checkbox.setAttribute('onclick', `toggleTask(event, ${itemId}, '${text}', false)`);
+            } else {
+                lineContainer.classList.add('completed-task');
+                checkbox.setAttribute('onclick', `toggleTask(event, ${itemId}, '${text}', true)`);
+            }
+        }
         function saveNote(id) {
             const card = document.querySelector(`[data-id="${id || 'new'}"]`);
             const title = card.querySelector('.input-title').value;
@@ -283,7 +306,15 @@
         function renderViewCard(item) {
             const countdown = item.type === 'ddl' ? getCountdown(item.deadline) : null;
             const pos = item.position || { x: 50, y: 50 };
-            const zIndex = item.zIndex || 100; // 默认层级
+            const zIndex = item.zIndex || 100;
+
+            // Process description to handle checkboxes and line breaks
+            let processedContent = (item.description || '')
+                .replace(/\[ \](.*)/g, '<div class="checkbox-line"><input type="checkbox" class="note-checkbox" onclick="toggleTask(event, ${item.id}, \'$1\', false)"> $1</div>')
+                .replace(/\[x\](.*)/g, '<div class="checkbox-line completed-task"><input type="checkbox" class="note-checkbox" checked onclick="toggleTask(event, ${item.id}, \'$1\', true)"> $1</div>');
+
+            // Use a template literal fix for the onclick IDs
+            processedContent = processedContent.split('${item.id}').join(item.id);
 
             return `
         <div class="note-card" data-id="${item.id}"
@@ -294,7 +325,7 @@
                 <span class="priority-badge priority-${item.priority}">${t('priority' + item.priority.charAt(0).toUpperCase() + item.priority.slice(1))}</span>
             </div>
             ${countdown ? `<div class="countdown ${countdown.class}">${countdown.text}</div>` : ''}
-            <div class="note-content">${item.description || ''}</div>
+            <div class="note-content">${processedContent}</div>
             <div class="note-footer">
                 <span class="note-type">${item.type === 'ddl' ? '📅 DDL' : '📝'}</span>
                 <div class="note-actions">
