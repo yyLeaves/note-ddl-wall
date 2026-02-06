@@ -45,8 +45,34 @@
         </div>
     </div>
 
+    <div id="todoPanel" class="todo-panel">
+        <button class="todo-toggle" onclick="toggleTodoPanel()">
+            <span id="todoToggleIcon">📋</span>
+            <span class="todo-toggle-text">Project TODOs</span>
+        </button>
+        <div class="todo-content">
+            <h3>🚀 Project Milestones</h3>
+            <textarea id="specialTodoInput" placeholder="Write your project tasks here... [ ] for task"
+                oninput="saveSpecialTodos()">
+            </textarea>
+            <p>
+                <ul>
+                    <li>Fix the flashing after adding/ editing / deleting a note. maybe also saving
+                    <li>Allow expand each task to whole page, and add notes inside</li>
+                    <li>Allow self defined tags</li>
+                    <li>Allow sorting by deadline / priority</li>
+                    <li>change better color for editing&deleting</li>
+                    <li>add texture for background</li>
+            </p>
+            <!-- add a list of dummy tasks -->
+             
+            <div id="specialTodoList" class="special-todo-list"></div>
+        </div>
+    </div>
+
     <script>
         let items = JSON.parse(localStorage.getItem('ddlItems')) || [];
+
         let currentFilter = 'all';
         let currentLang = localStorage.getItem('language') || 'zh';
         let editingItemId = null;
@@ -153,7 +179,6 @@
             }
         }
         function toggleTask(event, itemId, text, isCurrentlyChecked) {
-            // 1. 阻止事件冒泡，防止触发卡片的 mousedown (拖拽/置顶)
             event.stopPropagation();
 
             const item = items.find(i => i.id === itemId);
@@ -287,7 +312,6 @@
 
             let html = '';
 
-            // 如果正在添加，先渲染一个"草稿便签"
             if (isAdding) {
                 html += renderEditCard(null);
             }
@@ -388,6 +412,61 @@
             event.target.classList.add('active');
             renderItems();
         }
+
+        function toggleTodoPanel() {
+            const panel = document.getElementById('todoPanel');
+            panel.classList.toggle('open');
+            const icon = document.getElementById('todoToggleIcon');
+            icon.textContent = panel.classList.contains('open') ? '❌' : '📋';
+        }
+
+        function saveSpecialTodos() {
+            const text = document.getElementById('specialTodoInput').value;
+            localStorage.setItem('project_todos', text);
+            renderSpecialTodos();
+        }
+
+        function renderSpecialTodos() {
+            const text = localStorage.getItem('project_todos') || "";
+            document.getElementById('specialTodoInput').value = text;
+
+            const listContainer = document.getElementById('specialTodoList');
+
+            const html = text.split('\n').map((line, index) => {
+                if (line.startsWith('[ ]')) {
+                    const content = line.replace('[ ]', '').trim();
+                    return `<div class="checkbox-line">
+                <input type="checkbox" class="note-checkbox" onclick="toggleSpecialTask(${index}, false)">
+                <span>${content}</span>
+            </div>`;
+                } else if (line.startsWith('[x]')) {
+                    const content = line.replace('[x]', '').trim();
+                    return `<div class="checkbox-line completed-task">
+                <input type="checkbox" class="note-checkbox" checked onclick="toggleSpecialTask(${index}, true)">
+                <span>${content}</span>
+            </div>`;
+                }
+                return line ? `<div style="margin-bottom:5px">${line}</div>` : '';
+            }).join('');
+
+            listContainer.innerHTML = html;
+        }
+
+        function toggleSpecialTask(lineIndex, isDone) {
+            let lines = localStorage.getItem('project_todos').split('\n');
+            if (isDone) {
+                lines[lineIndex] = lines[lineIndex].replace('[x]', '[ ]');
+            } else {
+                lines[lineIndex] = lines[lineIndex].replace('[ ]', '[x]');
+            }
+            const newText = lines.join('\n');
+            localStorage.setItem('project_todos', newText);
+            renderSpecialTodos();
+        }
+
+        window.addEventListener('load', () => {
+            renderSpecialTodos();
+        });
 
         updateUI();
         renderItems();
