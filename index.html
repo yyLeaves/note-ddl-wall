@@ -55,6 +55,8 @@
         let draggedNote = null;
         let dragOffset = { x: 0, y: 0 };
 
+        let maxZIndex = items.length > 0 ? Math.max(...items.map(i => i.zIndex || 10)) : 10;
+
         const translations = {
             zh: {
                 mainTitle: '📌 我的DDL墙 📌',
@@ -137,7 +139,18 @@
         function enterEditMode(id) {
             isAdding = false;
             editingItemId = id;
+            bringToFront(id);
             renderItems();
+        }
+
+        function bringToFront(id) {
+            maxZIndex++;
+            const item = items.find(i => i.id === id);
+            if (item) {
+                item.zIndex = maxZIndex;
+                const el = document.querySelector(`[data-id="${id}"]`);
+                if (el) el.style.zIndex = maxZIndex;
+            }
         }
 
         function saveNote(id) {
@@ -151,23 +164,22 @@
             if (!title) return alert("Please enter a title!");
 
             if (id) {
-                // --- 编辑现有便签的逻辑 ---
                 const item = items.find(i => i.id === id);
                 item.title = title;
                 item.description = description;
                 item.priority = priority;
                 item.color = color;
-
                 item.deadline = deadline;
                 item.type = deadline ? 'ddl' : 'note';
-
             } else {
+                maxZIndex++;
                 items.unshift({
                     id: Date.now(),
                     type: deadline ? 'ddl' : 'note',
                     title, description, priority, color,
                     deadline,
                     createdAt: new Date().toISOString(),
+                    zIndex: maxZIndex,
                     position: { x: 100, y: 100 }
                 });
             }
@@ -190,6 +202,14 @@
 
             const card = e.currentTarget;
             draggedNote = { id, element: card };
+
+            bringToFront(id);
+
+            // maxZIndex++;
+            // card.style.zIndex = maxZIndex;
+            // const item = items.find(i => i.id === id);
+            // if (item) item.zIndex = maxZIndex;
+
             card.classList.add('dragging');
             const rect = card.getBoundingClientRect();
             const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
@@ -263,25 +283,27 @@
         function renderViewCard(item) {
             const countdown = item.type === 'ddl' ? getCountdown(item.deadline) : null;
             const pos = item.position || { x: 50, y: 50 };
+            const zIndex = item.zIndex || 100; // 默认层级
+
             return `
-                <div class="note-card" data-id="${item.id}"
-                     style="background: ${item.color}; left: ${pos.x}px; top: ${pos.y}px;"
-                     onmousedown="startDrag(event, ${item.id})">
-                    <div class="note-header">
-                        <div class="note-title">${item.title}</div>
-                        <span class="priority-badge priority-${item.priority}">${t('priority' + item.priority.charAt(0).toUpperCase() + item.priority.slice(1))}</span>
-                    </div>
-                    ${countdown ? `<div class="countdown ${countdown.class}">${countdown.text}</div>` : ''}
-                    <div class="note-content">${item.description || ''}</div>
-                    <div class="note-footer">
-                        <span class="note-type">${item.type === 'ddl' ? '📅 DDL' : '📝'}</span>
-                        <div class="note-actions">
-                            <button class="edit-btn" onclick="enterEditMode(${item.id})">✏️</button>
-                            <button class="delete-btn" onclick="deleteItem(${item.id})">🗑️</button>
-                        </div>
-                    </div>
+        <div class="note-card" data-id="${item.id}"
+             style="background: ${item.color}; left: ${pos.x}px; top: ${pos.y}px; z-index: ${zIndex};"
+             onmousedown="startDrag(event, ${item.id})">
+            <div class="note-header">
+                <div class="note-title">${item.title}</div>
+                <span class="priority-badge priority-${item.priority}">${t('priority' + item.priority.charAt(0).toUpperCase() + item.priority.slice(1))}</span>
+            </div>
+            ${countdown ? `<div class="countdown ${countdown.class}">${countdown.text}</div>` : ''}
+            <div class="note-content">${item.description || ''}</div>
+            <div class="note-footer">
+                <span class="note-type">${item.type === 'ddl' ? '📅 DDL' : '📝'}</span>
+                <div class="note-actions">
+                    <button class="edit-btn" onclick="enterEditMode(${item.id})">✏️</button>
+                    <button class="delete-btn" onclick="deleteItem(${item.id})">🗑️</button>
                 </div>
-            `;
+            </div>
+        </div>
+    `;
         }
 
         function renderEditCard(item) {
@@ -292,36 +314,33 @@
             const color = isNew ? '#ffd4b8' : item.color;
             const deadline = isNew ? '' : (item.deadline || '');
             const pos = isNew ? { x: 100, y: 100 } : item.position;
+            const zIndex = isNew ? 9999 : (item.zIndex || 9999); // 编辑中的便签总是很高
 
             return `
-                <div class="note-card editing" data-id="${isNew ? 'new' : item.id}"
-                     style="background: ${color}; left: ${pos.x}px; top: ${pos.y}px;">
-                    <input type="text" class="input-title" placeholder="${t('placeholderTitle')}" value="${title}">
-                    <textarea class="input-desc" placeholder="${t('placeholderDesc')}">${desc}</textarea>
-                    
-                    <div class="edit-controls">
-                        <select class="input-priority">
-                            <option value="high" ${priority === 'high' ? 'selected' : ''}>🔥 ${t('priorityHigh')}</option>
-                            <option value="medium" ${priority === 'medium' ? 'selected' : ''}>⚠️ ${t('priorityMedium')}</option>
-                            <option value="low" ${priority === 'low' ? 'selected' : ''}>✅ ${t('priorityLow')}</option>
-                        </select>
-                        <input type="datetime-local" class="input-deadline" value="${deadline}">
-                    </div>
-
-                    <div class="color-row">
-                        ${['#ffd4b8', '#ffb8c6', '#c8f0d4', '#e0d4ff', '#c8e4ff', '#fff9c4'].map(c =>
+        <div class="note-card editing" data-id="${isNew ? 'new' : item.id}"
+             style="background: ${color}; left: ${pos.x}px; top: ${pos.y}px; z-index: ${zIndex};">
+            <input type="text" class="input-title" placeholder="${t('placeholderTitle')}" value="${title}">
+            <textarea class="input-desc" placeholder="${t('placeholderDesc')}">${desc}</textarea>
+            <div class="edit-controls">
+                <select class="input-priority">
+                    <option value="high" ${priority === 'high' ? 'selected' : ''}>🔥 ${t('priorityHigh')}</option>
+                    <option value="medium" ${priority === 'medium' ? 'selected' : ''}>⚠️ ${t('priorityMedium')}</option>
+                    <option value="low" ${priority === 'low' ? 'selected' : ''}>✅ ${t('priorityLow')}</option>
+                </select>
+                <input type="datetime-local" class="input-deadline" value="${deadline}">
+            </div>
+            <div class="color-row">
+                ${['#ffd4b8', '#ffb8c6', '#c8f0d4', '#e0d4ff', '#c8e4ff', '#fff9c4'].map(c =>
                 `<div class="color-dot ${color === c ? 'active' : ''}" style="background:${c}" onclick="this.parentElement.parentElement.style.background='${c}'"></div>`
             ).join('')}
-                    </div>
-
-                    <div class="note-footer">
-                        <button class="cancel-btn" onclick="cancelAction()">${t('btnCancel')}</button>
-                        <button class="save-btn" onclick="saveNote(${isNew ? null : item.id})">${t('btnSave')}</button>
-                    </div>
-                </div>
-            `;
+            </div>
+            <div class="note-footer">
+                <button class="cancel-btn" onclick="cancelAction()">${t('btnCancel')}</button>
+                <button class="save-btn" onclick="saveNote(${isNew ? null : item.id})">${t('btnSave')}</button>
+            </div>
+        </div>
+    `;
         }
-
         function getCountdown(deadline) {
             const diff = new Date(deadline) - new Date();
             if (diff < 0) return { text: t('expired'), class: '' };
