@@ -1,0 +1,22 @@
+{
+  "name": "ddl-wall",
+  "version": "1.0.0",
+  "description": "个人DDL和注意事项管理应用",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "ddl",
+    "deadline",
+    "notes"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

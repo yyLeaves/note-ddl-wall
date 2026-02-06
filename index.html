@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My DDL Wall 📌</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Kalam:wght@300;400;700&family=Noto+Sans+SC:wght@400;700&family=Patrick+Hand&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="lang-switch">
+        <button class="lang-btn" onclick="toggleLanguage()">
+            <span id="langText">English</span>
+        </button>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1 id="mainTitle">📌 DDLs & Notes 📌</h1>
+            <p id="subtitle">直接在墙上记录你的灵感与期限</p>
+        </div>
+
+        <button class="floating-add-btn show" id="floatingBtn" onclick="toggleAddNote()">
+            <span id="addIcon">➕</span>
+        </button>
+
+        <div class="filter-section">
+            <button class="filter-btn active" onclick="filterItems('all')" id="filterAll">All</button>
+            <button class="filter-btn" onclick="filterItems('ddl')" id="filterDdl">🗓️ DDL</button>
+            <button class="filter-btn" onclick="filterItems('note')" id="filterNote">📝 Notes </button>
+            <button class="filter-btn" onclick="filterItems('high')" id="filterHigh">🔥 Urgent</button>
+        </div>
+
+        <div id="notesContainer" class="notes-container">
+        </div>
+
+        <div id="emptyState" class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h2 id="emptyTitle">墙上还空空如也</h2>
+            <p id="emptyText">点击右下角按钮添加第一个便签吧！</p>
+        </div>
+    </div>
+
+    <script>
+        let items = JSON.parse(localStorage.getItem('ddlItems')) || [];
+        let currentFilter = 'all';
+        let currentLang = localStorage.getItem('language') || 'zh';
+        let editingItemId = null;
+        let isAdding = false;
+
+        let draggedNote = null;
+        let dragOffset = { x: 0, y: 0 };
+
+        const translations = {
+            zh: {
+                mainTitle: '📌 我的DDL墙 📌',
+                subtitle: '直接在墙上记录你的灵感与期限',
+                langBtn: 'English',
+                placeholderTitle: '标题...',
+                placeholderDesc: '添加描述...',
+                btnSave: '确认',
+                btnCancel: '取消',
+                btnEdit: '编辑',
+                btnDelete: '删除',
+                typeDdl: 'DDL',
+                typeNote: '便签',
+                expired: '⏰ 已过期',
+                daysLeft: '还有 {0} 天',
+                hoursLeft: '⚠️ {0} 天 {1} 小时',
+                minutesLeft: '🔥 {0} 小时 {1} 分钟',
+                urgentMinutes: '🔥🔥 还有 {0} 分！',
+                emptyTitle: '墙上还空空如也',
+                emptyText: '点击右下角按钮添加第一个便签吧！',
+                priorityHigh: '紧急', priorityMedium: '一般', priorityLow: '不急',
+            },
+            en: {
+                mainTitle: '📌 My DDL Wall 📌',
+                subtitle: 'Pin notes and deadlines directly on the wall',
+                langBtn: '中文',
+                placeholderTitle: 'Title...',
+                placeholderDesc: 'Details...',
+                btnSave: 'Save',
+                btnCancel: 'Cancel',
+                btnEdit: 'Edit',
+                btnDelete: 'Delete',
+                typeDdl: 'DDL',
+                typeNote: 'Note',
+                expired: '⏰ Expired',
+                daysLeft: '{0} days left',
+                hoursLeft: '⚠️ {0}d {1}h left',
+                minutesLeft: '🔥 {0}h {1}m left',
+                urgentMinutes: '🔥🔥 {0}m left!',
+                emptyTitle: 'Your wall is empty',
+                emptyText: 'Click the button to add your first note!',
+                priorityHigh: 'Urgent', priorityMedium: 'Normal', priorityLow: 'Low',
+            }
+        };
+
+        function t(key, ...args) {
+            let text = translations[currentLang][key] || key;
+            args.forEach((arg, i) => { text = text.replace(`{${i}}`, arg); });
+            return text;
+        }
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('language', currentLang);
+            updateUI();
+            renderItems();
+        }
+
+        function updateUI() {
+            document.getElementById('mainTitle').textContent = t('mainTitle');
+            document.getElementById('subtitle').textContent = t('subtitle');
+            document.getElementById('langText').textContent = t('langBtn');
+            document.getElementById('emptyTitle').textContent = t('emptyTitle');
+            document.getElementById('emptyText').textContent = t('emptyText');
+        }
+
+        function toggleAddNote() {
+            if (isAdding) return;
+            isAdding = true;
+            editingItemId = null;
+            renderItems();
+        }
+
+        function cancelAction() {
+            isAdding = false;
+            editingItemId = null;
+            renderItems();
+        }
+
+        function enterEditMode(id) {
+            isAdding = false;
+            editingItemId = id;
+            renderItems();
+        }
+
+        function saveNote(id) {
+            const card = document.querySelector(`[data-id="${id || 'new'}"]`);
+            const title = card.querySelector('.input-title').value;
+            const description = card.querySelector('.input-desc').value;
+            const priority = card.querySelector('.input-priority').value;
+            const deadline = card.querySelector('.input-deadline')?.value; // 获取时间选择框的值
+            const color = card.style.backgroundColor;
+
+            if (!title) return alert("Please enter a title!");
+
+            if (id) {
+                // --- 编辑现有便签的逻辑 ---
+                const item = items.find(i => i.id === id);
+                item.title = title;
+                item.description = description;
+                item.priority = priority;
+                item.color = color;
+
+                item.deadline = deadline;
+                item.type = deadline ? 'ddl' : 'note';
+
+            } else {
+                items.unshift({
+                    id: Date.now(),
+                    type: deadline ? 'ddl' : 'note',
+                    title, description, priority, color,
+                    deadline,
+                    createdAt: new Date().toISOString(),
+                    position: { x: 100, y: 100 }
+                });
+            }
+
+            localStorage.setItem('ddlItems', JSON.stringify(items));
+            isAdding = false;
+            editingItemId = null;
+            renderItems();
+        }
+        function deleteItem(id) {
+            if (confirm("Delete this note?")) {
+                items = items.filter(item => item.id !== id);
+                localStorage.setItem('ddlItems', JSON.stringify(items));
+                renderItems();
+            }
+        }
+
+        function startDrag(e, id) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
+
+            const card = e.currentTarget;
+            draggedNote = { id, element: card };
+            card.classList.add('dragging');
+            const rect = card.getBoundingClientRect();
+            const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+            dragOffset.x = clientX - rect.left;
+            dragOffset.y = clientY - rect.top;
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (!draggedNote) return;
+            const clientX = e.clientX;
+            const clientY = e.clientY;
+            const container = document.getElementById('notesContainer');
+            const rect = container.getBoundingClientRect();
+
+            let x = clientX - rect.left - dragOffset.x;
+            let y = clientY - rect.top - dragOffset.y;
+
+            draggedNote.element.style.left = x + 'px';
+            draggedNote.element.style.top = y + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!draggedNote) return;
+            draggedNote.element.classList.remove('dragging');
+            const item = items.find(i => i.id === draggedNote.id);
+            if (item) {
+                item.position = {
+                    x: parseInt(draggedNote.element.style.left),
+                    y: parseInt(draggedNote.element.style.top)
+                };
+                localStorage.setItem('ddlItems', JSON.stringify(items));
+            }
+            draggedNote = null;
+        });
+
+        function renderItems() {
+            const container = document.getElementById('notesContainer');
+            const emptyState = document.getElementById('emptyState');
+            let filteredItems = items;
+
+            if (currentFilter !== 'all') {
+                filteredItems = items.filter(i => i.type === currentFilter || i.priority === currentFilter);
+            }
+
+            if (filteredItems.length === 0 && !isAdding) {
+                container.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            emptyState.style.display = 'none';
+
+            let html = '';
+
+            // 如果正在添加，先渲染一个"草稿便签"
+            if (isAdding) {
+                html += renderEditCard(null);
+            }
+
+            filteredItems.forEach(item => {
+                if (editingItemId === item.id) {
+                    html += renderEditCard(item);
+                } else {
+                    html += renderViewCard(item);
+                }
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderViewCard(item) {
+            const countdown = item.type === 'ddl' ? getCountdown(item.deadline) : null;
+            const pos = item.position || { x: 50, y: 50 };
+            return `
+                <div class="note-card" data-id="${item.id}"
+                     style="background: ${item.color}; left: ${pos.x}px; top: ${pos.y}px;"
+                     onmousedown="startDrag(event, ${item.id})">
+                    <div class="note-header">
+                        <div class="note-title">${item.title}</div>
+                        <span class="priority-badge priority-${item.priority}">${t('priority' + item.priority.charAt(0).toUpperCase() + item.priority.slice(1))}</span>
+                    </div>
+                    ${countdown ? `<div class="countdown ${countdown.class}">${countdown.text}</div>` : ''}
+                    <div class="note-content">${item.description || ''}</div>
+                    <div class="note-footer">
+                        <span class="note-type">${item.type === 'ddl' ? '📅 DDL' : '📝'}</span>
+                        <div class="note-actions">
+                            <button class="edit-btn" onclick="enterEditMode(${item.id})">✏️</button>
+                            <button class="delete-btn" onclick="deleteItem(${item.id})">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderEditCard(item) {
+            const isNew = !item;
+            const title = isNew ? '' : item.title;
+            const desc = isNew ? '' : item.description;
+            const priority = isNew ? 'medium' : item.priority;
+            const color = isNew ? '#ffd4b8' : item.color;
+            const deadline = isNew ? '' : (item.deadline || '');
+            const pos = isNew ? { x: 100, y: 100 } : item.position;
+
+            return `
+                <div class="note-card editing" data-id="${isNew ? 'new' : item.id}"
+                     style="background: ${color}; left: ${pos.x}px; top: ${pos.y}px;">
+                    <input type="text" class="input-title" placeholder="${t('placeholderTitle')}" value="${title}">
+                    <textarea class="input-desc" placeholder="${t('placeholderDesc')}">${desc}</textarea>
+                    
+                    <div class="edit-controls">
+                        <select class="input-priority">
+                            <option value="high" ${priority === 'high' ? 'selected' : ''}>🔥 ${t('priorityHigh')}</option>
+                            <option value="medium" ${priority === 'medium' ? 'selected' : ''}>⚠️ ${t('priorityMedium')}</option>
+                            <option value="low" ${priority === 'low' ? 'selected' : ''}>✅ ${t('priorityLow')}</option>
+                        </select>
+                        <input type="datetime-local" class="input-deadline" value="${deadline}">
+                    </div>
+
+                    <div class="color-row">
+                        ${['#ffd4b8', '#ffb8c6', '#c8f0d4', '#e0d4ff', '#c8e4ff', '#fff9c4'].map(c =>
+                `<div class="color-dot ${color === c ? 'active' : ''}" style="background:${c}" onclick="this.parentElement.parentElement.style.background='${c}'"></div>`
+            ).join('')}
+                    </div>
+
+                    <div class="note-footer">
+                        <button class="cancel-btn" onclick="cancelAction()">${t('btnCancel')}</button>
+                        <button class="save-btn" onclick="saveNote(${isNew ? null : item.id})">${t('btnSave')}</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getCountdown(deadline) {
+            const diff = new Date(deadline) - new Date();
+            if (diff < 0) return { text: t('expired'), class: '' };
+            const days = Math.floor(diff / 86400000);
+            const hours = Math.floor((diff % 86400000) / 3600000);
+            if (days > 7) return { text: t('daysLeft', days), class: 'safe' };
+            if (days > 0) return { text: t('hoursLeft', days, hours), class: 'warning' };
+            return { text: t('urgentMinutes', Math.floor(diff / 60000)), class: '' };
+        }
+
+        function filterItems(f) {
+            currentFilter = f;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            renderItems();
+        }
+
+        updateUI();
+        renderItems();
+    </script>
+</body>
+
+</html>
