@@ -148,7 +148,7 @@ body::after {
     padding: 10px 20px;
     background: rgba(255, 255, 255, 0.95);
     border: 2px solid var(--accent);
-    border-radius: 25px;
+    border-radius: 8px;
     cursor: pointer;
     font-weight: 700;
     color: var(--accent);
@@ -486,7 +486,7 @@ body::after {
     border: 1.5px solid rgba(74, 63, 63, 0.15);
     background: rgba(255, 255, 255, 0.5);
     color: var(--text-dark);
-    border-radius: 20px;
+    border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
     font-size: 0.95rem;
@@ -919,10 +919,97 @@ body::after {
 }
 
 .note-card {
-    /* ...原有属性... */
     transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease; /* 移除 top 和 left 的过渡，防止拖拽后的闪动 */
 }
 
 .note-card.editing {
     transition: all 0.3s ease;
 }
+
+/* Find the existing .priority-badge section (around line 538) and replace/update with this: */
+
+/* Badges & Indicators */
+.priority-badge,
+.note-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: 8px; /* Rounded pill shape like filter buttons */
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: 'Patrick Hand', cursive; /* Matches filter buttons */
+    color: var(--text-dark); /* Default text color, specific priorities override this */
+    line-height: 1;
+}
+
+.priority-badge .material-symbols-outlined,
+.note-type .material-symbols-outlined {
+    font-size: 16px;
+    font-weight: normal; /* Icons look better not bolded */
+}
+
+/* Specific Priority Colors (Text color needs to match the background contrast) */
+.priority-high { 
+    background: var(--urgent); 
+    color: white; 
+}
+.priority-medium { 
+    background: var(--warning); 
+    color: white; 
+}
+.priority-low { 
+    background: var(--success); 
+    color: white; 
+}
+
+/* Update Note Type specific styles */
+.note-type {
+    background: rgba(255, 255, 255, 0.5);
+    border: 1.5px solid rgba(74, 63, 63, 0.15);
+}
+
+
+/* Full Page Overlay */
+.full-page-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.expanded-card {
+    width: 90%;
+    max-width: 800px;
+    height: 85vh;
+    background: white;
+    border-radius: 12px; /* Matching your preference for "less round" */
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+    overflow: hidden;
+    animation: popIn 0.3s ease-out;
+}
+
+.expanded-header {
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.expanded-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 30px;
+}
+

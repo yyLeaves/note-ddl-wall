@@ -372,18 +372,34 @@
 
             processedContent = processedContent.split('${item.id}').join(item.id);
 
+            // Icon Mappings
+            const priorityIcons = {
+                high: 'bolt',
+                medium: 'bookmark',
+                low: 'low_priority'
+            };
+            
+            const typeIcon = item.type === 'ddl' ? 'calendar_month' : 'sticky_note_2';
+            const typeText = item.type === 'ddl' ? t('typeDdl') : t('typeNote');
+
             return `
         <div class="note-card" data-id="${item.id}"
              style="background: ${item.color}; left: ${pos.x}px; top: ${pos.y}px; z-index: ${zIndex};"
              onmousedown="startDrag(event, ${item.id})">
             <div class="note-header">
                 <div class="note-title">${item.title}</div>
-                <span class="priority-badge priority-${item.priority}">${t('priority' + item.priority.charAt(0).toUpperCase() + item.priority.slice(1))}</span>
+                <span class="priority-badge priority-${item.priority}">
+                    <span class="material-symbols-outlined">${priorityIcons[item.priority]}</span>
+                    ${t('priority' + item.priority.charAt(0).toUpperCase() + item.priority.slice(1))}
+                </span>
             </div>
             ${countdown ? `<div class="countdown ${countdown.class}">${countdown.text}</div>` : ''}
             <div class="note-content">${processedContent}</div>
             <div class="note-footer">
-                <span class="note-type">${item.type === 'ddl' ? '📅 DDL' : '📝'}</span>
+                <span class="note-type">
+                    <span class="material-symbols-outlined">${typeIcon}</span>
+                    ${typeText}
+                </span>
                 <div class="note-actions">
                     <button class="edit-btn" onclick="enterEditMode(${item.id})" title="Edit">
                         <span class="material-symbols-outlined">edit_note</span>
@@ -407,6 +423,7 @@
             const pos = isNew ? { x: 100, y: 100 } : item.position;
             const zIndex = isNew ? 9999 : (item.zIndex || 9999); 
 
+            // Removed emojis from the select options below
             return `
         <div class="note-card editing" data-id="${isNew ? 'new' : item.id}"
              style="background: ${color}; left: ${pos.x}px; top: ${pos.y}px; z-index: ${zIndex};">
@@ -414,9 +431,9 @@
             <textarea class="input-desc" placeholder="${t('placeholderDesc')}">${desc}</textarea>
             <div class="edit-controls">
                 <select class="input-priority">
-                    <option value="high" ${priority === 'high' ? 'selected' : ''}>🔥 ${t('priorityHigh')}</option>
-                    <option value="medium" ${priority === 'medium' ? 'selected' : ''}>⚠️ ${t('priorityMedium')}</option>
-                    <option value="low" ${priority === 'low' ? 'selected' : ''}>✅ ${t('priorityLow')}</option>
+                    <option value="high" ${priority === 'high' ? 'selected' : ''}>${t('priorityHigh')}</option>
+                    <option value="medium" ${priority === 'medium' ? 'selected' : ''}>${t('priorityMedium')}</option>
+                    <option value="low" ${priority === 'low' ? 'selected' : ''}>${t('priorityLow')}</option>
                 </select>
                 <input type="datetime-local" class="input-deadline" value="${deadline}">
             </div>
@@ -432,6 +449,7 @@
         </div>
     `;
         }
+
         function getCountdown(deadline) {
             const diff = new Date(deadline) - new Date();
             if (diff < 0) return { text: t('expired'), class: '' };
