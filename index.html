@@ -73,7 +73,6 @@
                 <li>Allow expand each task to whole page, and add notes inside</li>
                 <li>Allow self defined tags</li>
                 <li>Allow sorting by deadline / priority</li>
-                <li>add texture for background</li>
                 </p>
                 <!-- add a list of dummy tasks -->
 
@@ -331,6 +330,8 @@
         function renderItems() {
             const container = document.getElementById('notesContainer');
             const emptyState = document.getElementById('emptyState');
+            
+            
             let filteredItems = items;
 
             if (currentFilter !== 'all') {
@@ -342,6 +343,9 @@
                 emptyState.style.display = 'block';
                 return;
             }
+
+
+
             emptyState.style.display = 'none';
 
             let html = '';
