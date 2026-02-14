@@ -76,7 +76,7 @@ body::after {
     margin: 0 auto;
     position: relative;
     z-index: 1;
-    padding: 40px 20px;
+    padding: 10px 20px;
 }
 
 /* =========================================
@@ -84,8 +84,8 @@ body::after {
    ========================================= */
 .header {
     text-align: center;
-    margin-bottom: 40px;
-    padding: 60px 0 40px;
+    margin-bottom: 10px;
+    padding: 15px 0 5px;
     animation: slideDown 0.8s ease;
 }
 
@@ -135,8 +135,8 @@ body::after {
     font-size: 1.2rem;
     opacity: 0.8;
     text-align: center;
-    margin-top: 15px;
-    margin-bottom: 30px;
+    margin-top: 5px;
+    margin-bottom: 0;
     letter-spacing: 1px;
     text-transform: uppercase;
 }
@@ -478,7 +478,7 @@ body::after {
     display: flex;
     gap: 12px;
     justify-content: center;
-    margin-bottom: 40px;
+    margin-bottom: 15px;
     flex-wrap: wrap;
 }
 
@@ -519,6 +519,15 @@ body::after {
 #filterHigh:hover:not(.active) {
     border-color: var(--urgent);
     color: var(--urgent);
+}
+
+.sort-btn {
+    margin-left: 8px;
+    border-style: dashed;
+}
+
+.sort-btn:hover {
+    border-style: solid;
 }
 
 /* Floating Add Button */
@@ -878,9 +887,47 @@ body::after {
 /* =========================================
    8. Media Queries
    ========================================= */
-@media (max-width: 768px) {
+
+/* Tablet landscape */
+@media (max-width: 1024px) {
+    .container {
+        padding: 20px 15px;
+    }
+
+    .header {
+        padding: 40px 0 25px;
+        margin-bottom: 25px;
+    }
+
     .header h1 {
-        font-size: 2.5rem;
+        font-size: 3.5rem;
+    }
+}
+
+/* Tablet portrait & large phones */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .container {
+        padding: 15px 10px;
+        overflow-x: auto;
+    }
+
+    .header {
+        padding: 30px 0 20px;
+        margin-bottom: 20px;
+    }
+
+    .header h1 {
+        font-size: 2.8rem;
+    }
+
+    .header p {
+        font-size: 1rem;
+        margin-top: 10px;
+        margin-bottom: 20px;
     }
 
     .color-picker {
@@ -891,22 +938,225 @@ body::after {
         flex-direction: column;
     }
 
-    .note-card {
-        width: 100%;
-        position: relative !important;
+    .notes-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .filter-section {
+        gap: 8px;
         margin-bottom: 20px;
     }
 
-    .notes-container {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
+    .filter-btn {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .filter-btn .material-symbols-outlined {
+        font-size: 16px;
+    }
+
+    .floating-add-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 52px;
+        height: 52px;
+        font-size: 1.3rem;
+    }
+
+    .lang-switch {
+        top: 10px;
+        right: 10px;
+    }
+
+    .lang-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+
+    .todo-panel {
+        width: 280px;
+        left: -250px;
+        height: 400px;
+    }
+
+    .todo-toggle {
+        right: -40px;
+        width: 40px;
+        height: 100px;
+        font-size: 0.85rem;
+    }
+
+    .empty-state {
+        padding: 40px 15px;
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+    }
+
+    .empty-state h2 {
+        font-size: 1.8rem;
     }
 }
 
-@media (max-width: 600px) {
-    .header h1 { font-size: 3rem; }
-    .stamp-icon { display: none; }
+/* Phones */
+@media (max-width: 480px) {
+    body {
+        padding: 5px;
+    }
+
+    .container {
+        padding: 10px 8px;
+    }
+
+    .header {
+        padding: 20px 0 15px;
+        margin-bottom: 15px;
+    }
+
+    .header h1 {
+        font-size: 2rem;
+    }
+
+    .header p {
+        font-size: 0.85rem;
+        margin-top: 8px;
+        margin-bottom: 15px;
+        letter-spacing: 0.5px;
+    }
+
+    .title-underline {
+        height: 8px;
+        bottom: 4px;
+    }
+
+    .note-card {
+        padding: 18px;
+    }
+
+    .note-title {
+        font-size: 1.35rem;
+    }
+
+    .note-content {
+        font-size: 1.05rem;
+    }
+
+    .countdown {
+        font-size: 1.1rem;
+        padding: 8px;
+    }
+
+    .priority-badge {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+    }
+
+    .filter-section {
+        gap: 6px;
+        margin-bottom: 15px;
+    }
+
+    .filter-btn {
+        padding: 5px 10px;
+        font-size: 0.8rem;
+        gap: 4px;
+    }
+
+    .filter-btn .material-symbols-outlined {
+        font-size: 14px;
+    }
+
+    .todo-panel {
+        width: 260px;
+        left: -230px;
+        height: 350px;
+    }
+
+    .todo-content {
+        padding: 15px;
+    }
+
+    .todo-content h3 {
+        font-size: 1rem;
+        margin-bottom: 10px;
+    }
+
+    #specialTodoInput {
+        height: 80px;
+        font-size: 0.9rem;
+    }
+
+    .floating-add-btn {
+        bottom: 15px;
+        right: 15px;
+        width: 48px;
+        height: 48px;
+        font-size: 1.2rem;
+    }
+
+    .input-title {
+        font-size: 1.2rem;
+    }
+
+    .input-desc {
+        min-height: 90px;
+        font-size: 1rem;
+    }
+}
+
+/* Very small phones */
+@media (max-width: 360px) {
+    .header h1 {
+        font-size: 1.7rem;
+    }
+
+    .header p {
+        font-size: 0.8rem;
+    }
+
+    .note-card {
+        padding: 14px;
+    }
+
+    .note-title {
+        font-size: 1.2rem;
+    }
+
+    .note-content {
+        font-size: 1rem;
+    }
+
+    .filter-btn {
+        padding: 4px 8px;
+        font-size: 0.75rem;
+    }
+}
+
+/* Landscape orientation on phones */
+@media (max-height: 500px) and (orientation: landscape) {
+    .header {
+        padding: 10px 0;
+        margin-bottom: 10px;
+    }
+
+    .header h1 {
+        font-size: 2rem;
+    }
+
+    .header p {
+        margin-top: 5px;
+        margin-bottom: 10px;
+    }
+
+    .floating-add-btn {
+        bottom: 10px;
+        right: 10px;
+        width: 44px;
+        height: 44px;
+    }
 }
 
 .note-card {
@@ -1025,11 +1275,17 @@ body::after {
     z-index: 1;
 }
 
-.note-card:hover {
-    z-index: 999999 !important;
-    transform: scale(1.05) translateY(-10px) !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25) !important;
-    border-color: rgba(0, 0, 0, 0.15);
+@media (hover: hover) {
+    .note-card:hover {
+        z-index: 999999 !important;
+        transform: scale(1.05) translateY(-10px) !important;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25) !important;
+        border-color: rgba(0, 0, 0, 0.15);
+    }
+}
+
+.note-card {
+    touch-action: none;
 }
 
 .note-card.dragging {

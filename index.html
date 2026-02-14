@@ -46,6 +46,9 @@
             <button class="filter-btn" onclick="filterItems('high')" id="filterHigh">
                 <span class="material-symbols-outlined">bolt</span> Urgent
             </button>
+            <button class="filter-btn sort-btn" onclick="sortNotes()" id="sortBtn">
+                <span class="material-symbols-outlined">auto_awesome_mosaic</span> <span id="sortText">Sort</span>
+            </button>
         </div>
 
         <div id="notesContainer" class="notes-container">
@@ -114,6 +117,7 @@
                 emptyTitle: '墙上还空空如也',
                 emptyText: '点击右下角按钮添加第一个便签吧！',
                 priorityHigh: '紧急', priorityMedium: '一般', priorityLow: '不急',
+                sortBtn: '整理',
             },
             en: {
                 mainTitle: '📌 My DDL Wall 📌',
@@ -135,6 +139,7 @@
                 emptyTitle: 'Your wall is empty',
                 emptyText: 'Click the button to add your first note!',
                 priorityHigh: 'Urgent', priorityMedium: 'Normal', priorityLow: 'Low',
+                sortBtn: 'Sort',
             }
         };
 
@@ -156,6 +161,7 @@
             document.getElementById('mainTitle').innerText = titleText;
 
             document.getElementById('subtitle').innerText = t('subtitle');
+            document.getElementById('sortText').innerText = t('sortBtn');
         }
 
 
@@ -246,7 +252,7 @@
                     title, description, priority, color, deadline,
                     createdAt: new Date().toISOString(),
                     zIndex: maxZIndex,
-                    position: { x: 100, y: 100 }
+                    position: { x: Math.min(100, window.innerWidth - 300), y: 100 }
                 };
                 items.unshift(newItem);
             }
@@ -299,10 +305,8 @@
             dragOffset.y = clientY - rect.top;
         }
 
-        document.addEventListener('mousemove', (e) => {
+        function handleDragMove(clientX, clientY) {
             if (!draggedNote) return;
-            const clientX = e.clientX;
-            const clientY = e.clientY;
             const container = document.getElementById('notesContainer');
             const rect = container.getBoundingClientRect();
 
@@ -311,9 +315,9 @@
 
             draggedNote.element.style.left = x + 'px';
             draggedNote.element.style.top = y + 'px';
-        });
+        }
 
-        document.addEventListener('mouseup', () => {
+        function handleDragEnd() {
             if (!draggedNote) return;
             draggedNote.element.classList.remove('dragging');
             const item = items.find(i => i.id === draggedNote.id);
@@ -325,7 +329,93 @@
                 localStorage.setItem('ddlItems', JSON.stringify(items));
             }
             draggedNote = null;
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            handleDragMove(e.clientX, e.clientY);
         });
+
+        document.addEventListener('mouseup', handleDragEnd);
+
+        document.addEventListener('touchmove', (e) => {
+            if (!draggedNote) return;
+            e.preventDefault();
+            handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+        }, { passive: false });
+
+        document.addEventListener('touchend', handleDragEnd);
+
+        function sortNotes() {
+            const container = document.getElementById('notesContainer');
+            const containerWidth = container.clientWidth;
+            const cardWidth = 280;
+            const gap = 20;
+            const cols = Math.max(1, Math.floor((containerWidth + gap) / (cardWidth + gap)));
+
+            let filteredItems = items;
+            if (currentFilter !== 'all') {
+                filteredItems = items.filter(i => i.type === currentFilter || i.priority === currentFilter);
+            }
+            if (filteredItems.length === 0) return;
+
+            // Sort: high priority first, then by deadline (earliest first), then by creation date
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+            filteredItems.sort((a, b) => {
+                if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+                    return priorityOrder[a.priority] - priorityOrder[b.priority];
+                }
+                if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
+                if (a.deadline) return -1;
+                if (b.deadline) return 1;
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            });
+
+            // Calculate starting x offset to center the grid
+            const totalGridWidth = cols * cardWidth + (cols - 1) * gap;
+            const startX = Math.max(0, Math.floor((containerWidth - totalGridWidth) / 2));
+
+            // Measure actual card heights per row, then position
+            const rowHeights = [];
+            const totalRows = Math.ceil(filteredItems.length / cols);
+            for (let r = 0; r < totalRows; r++) {
+                let maxH = 0;
+                for (let c = 0; c < cols; c++) {
+                    const idx = r * cols + c;
+                    if (idx >= filteredItems.length) break;
+                    const el = container.querySelector(`[data-id="${filteredItems[idx].id}"]`);
+                    if (el) maxH = Math.max(maxH, el.offsetHeight);
+                }
+                rowHeights.push(maxH);
+            }
+
+            filteredItems.forEach((item, index) => {
+                const col = index % cols;
+                const row = Math.floor(index / cols);
+                const x = startX + col * (cardWidth + gap);
+                let y = 0;
+                for (let r = 0; r < row; r++) {
+                    y += rowHeights[r] + gap;
+                }
+
+                item.position = { x, y };
+                item.zIndex = 10 + index;
+
+                const el = container.querySelector(`[data-id="${item.id}"]`);
+                if (el) {
+                    el.style.transition = 'left 0.4s ease, top 0.4s ease';
+                    el.style.left = x + 'px';
+                    el.style.top = y + 'px';
+                    el.style.zIndex = 10 + index;
+                    setTimeout(() => { el.style.transition = ''; }, 450);
+                }
+            });
+
+            // Update container height based on actual row heights
+            const totalHeight = rowHeights.reduce((sum, h) => sum + h + gap, 0);
+            container.style.minHeight = (totalHeight + 50) + 'px';
+
+            localStorage.setItem('ddlItems', JSON.stringify(items));
+        }
 
         function renderItems() {
             const container = document.getElementById('notesContainer');
@@ -389,7 +479,7 @@
             return `
         <div class="note-card" data-id="${item.id}"
              style="background: ${item.color}; left: ${pos.x}px; top: ${pos.y}px; z-index: ${zIndex};"
-             onmousedown="startDrag(event, ${item.id})">
+             onmousedown="startDrag(event, ${item.id})" ontouchstart="startDrag(event, ${item.id})">
             <div class="note-header">
                 <div class="note-title">${item.title}</div>
                 <span class="priority-badge priority-${item.priority}">
@@ -424,7 +514,7 @@
             const priority = isNew ? 'medium' : item.priority;
             const color = isNew ? '#ffd4b8' : item.color;
             const deadline = isNew ? '' : (item.deadline || '');
-            const pos = isNew ? { x: 100, y: 100 } : item.position;
+            const pos = isNew ? { x: Math.min(100, window.innerWidth - 300), y: 10 } : item.position;
             const zIndex = isNew ? 9999 : (item.zIndex || 9999); 
 
             // Removed emojis from the select options below
