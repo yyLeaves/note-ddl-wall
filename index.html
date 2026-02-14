@@ -74,8 +74,7 @@
             <p>
             <ul>
                 <li>Allow expand each task to whole page, and add notes inside</li>
-                <li>Allow self defined tags</li>
-                <li>Allow sorting by deadline / priority</li>
+                <li>Disable dragging out of screen</li>
                 </p>
                 <!-- add a list of dummy tasks -->
 
@@ -93,6 +92,7 @@
 
         let draggedNote = null;
         let dragOffset = { x: 0, y: 0 };
+        let isSorted = false;
 
         let maxZIndex = items.length > 0 ? Math.max(...items.map(i => i.zIndex || 10)) : 10;
 
@@ -117,7 +117,7 @@
                 emptyTitle: '墙上还空空如也',
                 emptyText: '点击右下角按钮添加第一个便签吧！',
                 priorityHigh: '紧急', priorityMedium: '一般', priorityLow: '不急',
-                sortBtn: '整理',
+                sortBtn: '整理', placeholderTag: '添加标签, 回车确认',
             },
             en: {
                 mainTitle: '📌 My DDL Wall 📌',
@@ -139,7 +139,7 @@
                 emptyTitle: 'Your wall is empty',
                 emptyText: 'Click the button to add your first note!',
                 priorityHigh: 'Urgent', priorityMedium: 'Normal', priorityLow: 'Low',
-                sortBtn: 'Sort',
+                sortBtn: 'Sort', placeholderTag: 'Add tag, press Enter',
             }
         };
 
@@ -237,19 +237,20 @@
             const priority = card.querySelector('.input-priority').value;
             const deadline = card.querySelector('.input-deadline')?.value;
             const color = card.style.backgroundColor;
+            const tags = [...card.querySelectorAll('.tag-pills .note-tag')].map(el => el.firstChild.textContent.trim());
 
             if (!title) return alert("Please enter a title!");
 
             let newItem;
             if (id) {
                 newItem = items.find(i => i.id === id);
-                Object.assign(newItem, { title, description, priority, color, deadline, type: deadline ? 'ddl' : 'note' });
+                Object.assign(newItem, { title, description, priority, color, deadline, tags, type: deadline ? 'ddl' : 'note' });
             } else {
                 maxZIndex++;
                 newItem = {
                     id: Date.now(),
                     type: deadline ? 'ddl' : 'note',
-                    title, description, priority, color, deadline,
+                    title, description, priority, color, deadline, tags,
                     createdAt: new Date().toISOString(),
                     zIndex: maxZIndex,
                     position: { x: Math.min(100, window.innerWidth - 300), y: 100 }
@@ -327,6 +328,7 @@
                     y: parseInt(draggedNote.element.style.top)
                 };
                 localStorage.setItem('ddlItems', JSON.stringify(items));
+                isSorted = false;
             }
             draggedNote = null;
         }
@@ -345,50 +347,33 @@
 
         document.addEventListener('touchend', handleDragEnd);
 
-        function sortNotes() {
+        function layoutNotes(notesList) {
             const container = document.getElementById('notesContainer');
             const containerWidth = container.clientWidth;
             const cardWidth = 280;
             const gap = 20;
             const cols = Math.max(1, Math.floor((containerWidth + gap) / (cardWidth + gap)));
 
-            let filteredItems = items;
-            if (currentFilter !== 'all') {
-                filteredItems = items.filter(i => i.type === currentFilter || i.priority === currentFilter);
-            }
-            if (filteredItems.length === 0) return;
+            if (notesList.length === 0) return;
 
-            // Sort: high priority first, then by deadline (earliest first), then by creation date
-            const priorityOrder = { high: 0, medium: 1, low: 2 };
-            filteredItems.sort((a, b) => {
-                if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-                    return priorityOrder[a.priority] - priorityOrder[b.priority];
-                }
-                if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
-                if (a.deadline) return -1;
-                if (b.deadline) return 1;
-                return new Date(b.createdAt) - new Date(a.createdAt);
-            });
-
-            // Calculate starting x offset to center the grid
             const totalGridWidth = cols * cardWidth + (cols - 1) * gap;
             const startX = Math.max(0, Math.floor((containerWidth - totalGridWidth) / 2));
 
-            // Measure actual card heights per row, then position
+            // Measure actual card heights per row
             const rowHeights = [];
-            const totalRows = Math.ceil(filteredItems.length / cols);
+            const totalRows = Math.ceil(notesList.length / cols);
             for (let r = 0; r < totalRows; r++) {
                 let maxH = 0;
                 for (let c = 0; c < cols; c++) {
                     const idx = r * cols + c;
-                    if (idx >= filteredItems.length) break;
-                    const el = container.querySelector(`[data-id="${filteredItems[idx].id}"]`);
+                    if (idx >= notesList.length) break;
+                    const el = container.querySelector(`[data-id="${notesList[idx].id}"]`);
                     if (el) maxH = Math.max(maxH, el.offsetHeight);
                 }
                 rowHeights.push(maxH);
             }
 
-            filteredItems.forEach((item, index) => {
+            notesList.forEach((item, index) => {
                 const col = index % cols;
                 const row = Math.floor(index / cols);
                 const x = startX + col * (cardWidth + gap);
@@ -410,12 +395,55 @@
                 }
             });
 
-            // Update container height based on actual row heights
             const totalHeight = rowHeights.reduce((sum, h) => sum + h + gap, 0);
             container.style.minHeight = (totalHeight + 50) + 'px';
-
             localStorage.setItem('ddlItems', JSON.stringify(items));
         }
+
+        function getFilteredItems() {
+            if (currentFilter !== 'all') {
+                return items.filter(i => i.type === currentFilter || i.priority === currentFilter);
+            }
+            return [...items];
+        }
+
+        function sortNotes() {
+            let filteredItems = getFilteredItems();
+            if (filteredItems.length === 0) return;
+
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+            filteredItems.sort((a, b) => {
+                if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+                    return priorityOrder[a.priority] - priorityOrder[b.priority];
+                }
+                if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
+                if (a.deadline) return -1;
+                if (b.deadline) return 1;
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            });
+
+            layoutNotes(filteredItems);
+            isSorted = true;
+        }
+
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const containerWidth = document.getElementById('notesContainer').clientWidth;
+                const cardWidth = 280;
+                const filteredItems = getFilteredItems();
+
+                if (isSorted) {
+                    layoutNotes(filteredItems);
+                } else {
+                    const overflow = filteredItems.some(item =>
+                        item.position && item.position.x + cardWidth > containerWidth
+                    );
+                    if (overflow) layoutNotes(filteredItems);
+                }
+            }, 150);
+        });
 
         function renderItems() {
             const container = document.getElementById('notesContainer');
@@ -487,6 +515,7 @@
                     ${t('priority' + item.priority.charAt(0).toUpperCase() + item.priority.slice(1))}
                 </span>
             </div>
+            ${(item.tags && item.tags.length) ? `<div class="note-tags">${item.tags.map(tag => `<span class="note-tag">${tag}</span>`).join('')}</div>` : ''}
             ${countdown ? `<div class="countdown ${countdown.class}">${countdown.text}</div>` : ''}
             <div class="note-content">${processedContent}</div>
             <div class="note-footer">
@@ -507,6 +536,19 @@
     `;
         }
 
+        function addTag(e) {
+            if (e.key !== 'Enter' && e.key !== ',') return;
+            e.preventDefault();
+            const input = e.target;
+            const tag = input.value.replace(/,/g, '').trim();
+            if (!tag) return;
+            const container = input.closest('.tag-input-row').querySelector('.tag-pills');
+            container.insertAdjacentHTML('beforeend',
+                `<span class="note-tag edit-tag">${tag}<span class="tag-remove" onclick="this.parentElement.remove()">x</span></span>`
+            );
+            input.value = '';
+        }
+
         function renderEditCard(item) {
             const isNew = !item;
             const title = isNew ? '' : item.title;
@@ -514,10 +556,14 @@
             const priority = isNew ? 'medium' : item.priority;
             const color = isNew ? '#ffd4b8' : item.color;
             const deadline = isNew ? '' : (item.deadline || '');
+            const tags = isNew ? [] : (item.tags || []);
             const pos = isNew ? { x: Math.min(100, window.innerWidth - 300), y: 10 } : item.position;
-            const zIndex = isNew ? 9999 : (item.zIndex || 9999); 
+            const zIndex = isNew ? 9999 : (item.zIndex || 9999);
 
-            // Removed emojis from the select options below
+            const tagPills = tags.map(tag =>
+                `<span class="note-tag edit-tag">${tag}<span class="tag-remove" onclick="this.parentElement.remove()">x</span></span>`
+            ).join('');
+
             return `
         <div class="note-card editing" data-id="${isNew ? 'new' : item.id}"
              style="background: ${color}; left: ${pos.x}px; top: ${pos.y}px; z-index: ${zIndex};">
@@ -530,6 +576,10 @@
                     <option value="low" ${priority === 'low' ? 'selected' : ''}>${t('priorityLow')}</option>
                 </select>
                 <input type="datetime-local" class="input-deadline" value="${deadline}">
+            </div>
+            <div class="tag-input-row">
+                <div class="tag-pills">${tagPills}</div>
+                <input type="text" class="input-tag" placeholder="${t('placeholderTag')}" onkeydown="addTag(event)">
             </div>
             <div class="color-row">
                 ${['#ffd4b8', '#ffb8c6', '#c8f0d4', '#e0d4ff', '#c8e4ff', '#fff9c4'].map(c =>

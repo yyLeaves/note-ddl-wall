@@ -522,7 +522,6 @@ body::after {
 }
 
 .sort-btn {
-    margin-left: 8px;
     border-style: dashed;
 }
 
@@ -702,6 +701,68 @@ body::after {
 
 .completed-task .note-checkbox {
     filter: sepia(1);
+}
+
+/* Tags */
+.note-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 6px 0;
+}
+
+.note-tag {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 0.8rem;
+    padding: 2px 10px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.13);
+    color: var(--text-dark);
+    line-height: 1.4;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.tag-input-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 10px;
+}
+
+.tag-input-row .tag-pills {
+    display: contents;
+}
+
+.edit-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.tag-remove {
+    cursor: pointer;
+    font-size: 0.7rem;
+    opacity: 0.5;
+    margin-left: 2px;
+}
+
+.tag-remove:hover {
+    opacity: 1;
+}
+
+.input-tag {
+    flex: 1;
+    min-width: 80px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed rgba(0, 0, 0, 0.15);
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 3px 5px;
+    outline: none;
 }
 
 /* Footer & Actions */
@@ -891,12 +952,7 @@ body::after {
 /* Tablet landscape */
 @media (max-width: 1024px) {
     .container {
-        padding: 20px 15px;
-    }
-
-    .header {
-        padding: 40px 0 25px;
-        margin-bottom: 25px;
+        padding: 10px 15px;
     }
 
     .header h1 {
@@ -912,12 +968,6 @@ body::after {
 
     .container {
         padding: 15px 10px;
-        overflow-x: auto;
-    }
-
-    .header {
-        padding: 30px 0 20px;
-        margin-bottom: 20px;
     }
 
     .header h1 {
@@ -926,8 +976,6 @@ body::after {
 
     .header p {
         font-size: 1rem;
-        margin-top: 10px;
-        margin-bottom: 20px;
     }
 
     .color-picker {
@@ -939,8 +987,7 @@ body::after {
     }
 
     .notes-container {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        overflow: visible;
     }
 
     .filter-section {
@@ -1011,19 +1058,12 @@ body::after {
         padding: 10px 8px;
     }
 
-    .header {
-        padding: 20px 0 15px;
-        margin-bottom: 15px;
-    }
-
     .header h1 {
         font-size: 2rem;
     }
 
     .header p {
         font-size: 0.85rem;
-        margin-top: 8px;
-        margin-bottom: 15px;
         letter-spacing: 0.5px;
     }
 
