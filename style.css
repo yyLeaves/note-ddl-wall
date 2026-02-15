@@ -566,6 +566,39 @@ body::after {
     opacity: 0.8;
 }
 
+/* Floating Clear Expired Button */
+.floating-clear-btn {
+    position: fixed;
+    bottom: 100px;
+    right: 30px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--urgent);
+    border: 2px solid var(--urgent);
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1001;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.floating-clear-btn.show {
+    display: flex;
+    animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.floating-clear-btn:hover {
+    background: var(--urgent);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 8px 25px rgba(255, 107, 157, 0.4);
+}
+
 /* =========================================
    5. Note Cards (The Sticky Notes)
    ========================================= */
@@ -1020,6 +1053,13 @@ body::after {
         font-size: 1.3rem;
     }
 
+    .floating-clear-btn {
+        bottom: 82px;
+        right: 20px;
+        width: 42px;
+        height: 42px;
+    }
+
     .lang-switch {
         top: 10px;
         right: 10px;
@@ -1145,6 +1185,13 @@ body::after {
         font-size: 1.2rem;
     }
 
+    .floating-clear-btn {
+        bottom: 73px;
+        right: 15px;
+        width: 40px;
+        height: 40px;
+    }
+
     .input-title {
         font-size: 1.2rem;
     }
@@ -1204,6 +1251,13 @@ body::after {
         right: 10px;
         width: 44px;
         height: 44px;
+    }
+
+    .floating-clear-btn {
+        bottom: 62px;
+        right: 10px;
+        width: 38px;
+        height: 38px;
     }
 }
 

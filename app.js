@@ -38,6 +38,7 @@ const translations = {
         sortBtn: '整理', placeholderTag: '添加标签, 回车确认',
         icsImport: '导入ICS', icsNoEvents: '未找到日历事件',
         icsImported: '成功导入 {0} 个事件', recurring: '每周重复',
+        clearExpired: '清除已过期', clearedCount: '已清除 {0} 个过期项', clearedNone: '没有过期项',
     },
     en: {
         mainTitle: '📌 My DDL Wall 📌',
@@ -62,6 +63,7 @@ const translations = {
         sortBtn: 'Sort', placeholderTag: 'Add tag, press Enter',
         icsImport: 'Import ICS', icsNoEvents: 'No calendar events found',
         icsImported: 'Successfully imported {0} event(s)', recurring: 'Weekly recurring',
+        clearExpired: 'Clear Expired', clearedCount: 'Cleared {0} expired item(s)', clearedNone: 'No expired items',
     }
 };
 
@@ -667,6 +669,9 @@ function handleICSImport(event) {
                 tags.push(dayTagMap[byDay] || byDay);
 
                 deadline = getNextOccurrence(recurrence, deadline);
+            } else if (deadline && new Date(deadline) < new Date()) {
+                // Skip expired non-recurring events
+                return;
             }
 
             maxZIndex++;
@@ -699,6 +704,27 @@ function handleICSImport(event) {
 
     reader.readAsText(file);
     event.target.value = '';
+}
+
+// =========================================
+// Clear Expired
+// =========================================
+function clearExpired() {
+    const now = new Date();
+    const expiredItems = items.filter(item =>
+        item.type === 'ddl' && !item.recurrence && item.deadline && new Date(item.deadline) < now
+    );
+
+    if (expiredItems.length === 0) {
+        alert(t('clearedNone'));
+        return;
+    }
+
+    const expiredIds = new Set(expiredItems.map(i => i.id));
+    items = items.filter(i => !expiredIds.has(i.id));
+    localStorage.setItem('ddlItems', JSON.stringify(items));
+    renderItems();
+    alert(t('clearedCount', expiredItems.length));
 }
 
 // =========================================

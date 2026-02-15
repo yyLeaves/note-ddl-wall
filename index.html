@@ -32,6 +32,9 @@
         <button class="floating-add-btn show" id="floatingBtn" onclick="toggleAddNote()">
             <span id="addIcon">➕</span>
         </button>
+        <button class="floating-clear-btn show" id="clearExpiredBtn" onclick="clearExpired()" title="Clear Expired">
+            <span class="material-symbols-outlined">delete_sweep</span>
+        </button>
 
         <div class="filter-section">
             <button class="filter-btn active" onclick="filterItems('all')" id="filterAll">
@@ -79,6 +82,7 @@
             <ul>
                 <li>Allow expand each task to whole page, and add notes inside</li>
                 <li>Disable dragging out of screen</li>
+                <li>Allow lock a note (cannot be moved or deleted)</li>
                 </p>
                 <!-- add a list of dummy tasks -->
 
