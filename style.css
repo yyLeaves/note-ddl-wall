@@ -13,6 +13,7 @@
     --urgent: #ff6b9d;
     --warning: #ffb347;
     --success: #a8e6cf;
+    --success-text: #2d8a5e;
     --accent: #c77dff;
 
     /* Note Colors */
@@ -666,7 +667,14 @@ body::after {
 }
 
 .countdown.warning { color: var(--warning); }
-.countdown.safe { color: var(--success); }
+.countdown.safe { color: var(--success-text); }
+
+.recurring-icon {
+    font-size: 16px;
+    vertical-align: middle;
+    margin-right: 4px;
+    opacity: 0.7;
+}
 
 .note-type {
     font-size: 0.95rem;
