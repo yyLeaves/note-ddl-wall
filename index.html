@@ -49,6 +49,9 @@
             <button class="filter-btn" onclick="filterItems('high')" id="filterHigh">
                 <span class="material-symbols-outlined">bolt</span> Urgent
             </button>
+            <button class="filter-btn" onclick="filterItems('done')" id="filterDone">
+                <span class="material-symbols-outlined">task_alt</span> <span id="doneFilterText">Done</span>
+            </button>
             <button class="filter-btn sort-btn" onclick="sortNotes()" id="sortBtn">
                 <span class="material-symbols-outlined">auto_awesome_mosaic</span> <span id="sortText">Sort</span>
             </button>
@@ -65,6 +68,15 @@
             <div class="empty-state-icon">📭</div>
             <h2 id="emptyTitle">墙上还空空如也</h2>
             <p id="emptyText">点击右下角按钮添加第一个便签吧！</p>
+        </div>
+
+        <div id="doneSection" class="done-section" style="display:none">
+            <div class="done-section-header">
+                <span class="material-symbols-outlined">task_alt</span>
+                <h2 id="doneSectionTitle">Completed</h2>
+            </div>
+            <div id="doneContainer" class="notes-container done-notes-container">
+            </div>
         </div>
     </div>
 

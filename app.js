@@ -40,6 +40,8 @@ const translations = {
         icsImported: '成功导入 {0} 个事件', recurring: '每周重复',
         clearExpired: '清除已过期', clearedCount: '已清除 {0} 个过期项', clearedNone: '没有过期项',
         repeatWeekly: '每周重复',
+        done: '完成', undone: '恢复', filterDone: '已完成',
+        doneSection: '已完成',
     },
     en: {
         mainTitle: '📌 My DDL Wall 📌',
@@ -66,6 +68,8 @@ const translations = {
         icsImported: 'Successfully imported {0} event(s)', recurring: 'Weekly recurring',
         clearExpired: 'Clear Expired', clearedCount: 'Cleared {0} expired item(s)', clearedNone: 'No expired items',
         repeatWeekly: 'Repeat weekly',
+        done: 'Done', undone: 'Undo', filterDone: 'Done',
+        doneSection: 'Completed',
     }
 };
 
@@ -92,6 +96,10 @@ function updateUI() {
     document.getElementById('sortText').innerText = t('sortBtn');
     const icsText = document.getElementById('importIcsText');
     if (icsText) icsText.innerText = t('icsImport');
+    const doneFilterText = document.getElementById('doneFilterText');
+    if (doneFilterText) doneFilterText.innerText = t('filterDone');
+    const doneSectionTitle = document.getElementById('doneSectionTitle');
+    if (doneSectionTitle) doneSectionTitle.innerText = t('doneSection');
 }
 
 // =========================================
@@ -243,6 +251,81 @@ function deleteItem(id) {
     }
 }
 
+function markDone(id) {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    item.done = true;
+    item.doneAt = new Date().toISOString();
+    localStorage.setItem('ddlItems', JSON.stringify(items));
+
+    const el = document.querySelector(`[data-id="${id}"]`);
+    if (el) {
+        const rect = el.getBoundingClientRect();
+        spawnFireworks(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        el.classList.add('done-shrink');
+        setTimeout(() => {
+            el.remove();
+            // Append to done section without re-rendering active notes
+            const doneContainer = document.getElementById('doneContainer');
+            const doneSection = document.getElementById('doneSection');
+            if (doneContainer && doneSection) {
+                doneSection.style.display = 'block';
+                doneContainer.insertAdjacentHTML('beforeend', renderViewCard(item));
+            }
+            // Show empty state if no active items left
+            const activeCount = items.filter(i => !i.done).length;
+            if (activeCount === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+            }
+        }, 600);
+    }
+}
+
+function undoMarkDone(id) {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    delete item.done;
+    delete item.doneAt;
+    localStorage.setItem('ddlItems', JSON.stringify(items));
+
+    // Remove from done container without re-rendering everything
+    const el = document.querySelector(`[data-id="${id}"]`);
+    if (el) el.remove();
+
+    // Append to active container
+    const container = document.getElementById('notesContainer');
+    container.insertAdjacentHTML('beforeend', renderViewCard(item));
+    document.getElementById('emptyState').style.display = 'none';
+
+    // Hide done section if empty
+    const doneItems = items.filter(i => i.done);
+    if (doneItems.length === 0) {
+        document.getElementById('doneSection').style.display = 'none';
+    }
+}
+
+function spawnFireworks(x, y) {
+    const colors = ['#ff6b9d', '#c77dff', '#ffb347', '#a8e6cf', '#c8e4ff', '#fff9c4', '#ffb8c6'];
+    const count = 30;
+    for (let i = 0; i < count; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'firework-particle';
+        const angle = (Math.PI * 2 * i) / count;
+        const velocity = 80 + Math.random() * 60;
+        const dx = Math.cos(angle) * velocity;
+        const dy = Math.sin(angle) * velocity;
+        const size = 4 + Math.random() * 4;
+        particle.style.cssText = `
+            left:${x}px; top:${y}px;
+            width:${size}px; height:${size}px;
+            background:${colors[Math.floor(Math.random() * colors.length)]};
+            --dx:${dx}px; --dy:${dy}px;
+        `;
+        document.body.appendChild(particle);
+        setTimeout(() => particle.remove(), 800);
+    }
+}
+
 // =========================================
 // Drag & Drop
 // =========================================
@@ -359,10 +442,14 @@ function layoutNotes(notesList) {
 }
 
 function getFilteredItems() {
-    if (currentFilter !== 'all') {
-        return items.filter(i => i.type === currentFilter || i.priority === currentFilter);
+    if (currentFilter === 'done') {
+        return items.filter(i => i.done);
     }
-    return [...items];
+    let filtered = items.filter(i => !i.done);
+    if (currentFilter !== 'all') {
+        filtered = filtered.filter(i => i.type === currentFilter || i.priority === currentFilter);
+    }
+    return filtered;
 }
 
 function sortNotes() {
@@ -409,36 +496,66 @@ window.addEventListener('resize', () => {
 function renderItems() {
     const container = document.getElementById('notesContainer');
     const emptyState = document.getElementById('emptyState');
+    const doneContainer = document.getElementById('doneContainer');
+    const doneSection = document.getElementById('doneSection');
 
-    let filteredItems = items;
+    let activeItems, doneItems;
 
-    if (currentFilter !== 'all') {
-        filteredItems = items.filter(i => i.type === currentFilter || i.priority === currentFilter);
+    if (currentFilter === 'done') {
+        activeItems = [];
+        doneItems = items.filter(i => i.done);
+    } else {
+        let filtered = items.filter(i => !i.done);
+        if (currentFilter !== 'all') {
+            filtered = filtered.filter(i => i.type === currentFilter || i.priority === currentFilter);
+        }
+        activeItems = filtered;
+        doneItems = items.filter(i => i.done);
     }
 
-    if (filteredItems.length === 0 && !isAdding) {
+    if (activeItems.length === 0 && doneItems.length === 0 && !isAdding) {
         container.innerHTML = '';
         emptyState.style.display = 'block';
+        if (doneSection) doneSection.style.display = 'none';
         return;
     }
 
-    emptyState.style.display = 'none';
+    emptyState.style.display = activeItems.length === 0 && !isAdding && currentFilter !== 'done' ? 'block' : 'none';
 
     let html = '';
-
     if (isAdding) {
         html += renderEditCard(null);
     }
-
-    filteredItems.forEach(item => {
+    activeItems.forEach(item => {
         if (editingItemId === item.id) {
             html += renderEditCard(item);
         } else {
             html += renderViewCard(item);
         }
     });
-
     container.innerHTML = html;
+
+    // Collapse active container when empty so done section is visible
+    container.style.minHeight = activeItems.length === 0 ? '0' : '';
+
+    // Done section
+    if (doneSection && doneContainer) {
+        if (doneItems.length > 0) {
+            doneSection.style.display = 'block';
+            let doneHtml = '';
+            doneItems.forEach(item => {
+                if (editingItemId === item.id) {
+                    doneHtml += renderEditCard(item);
+                } else {
+                    doneHtml += renderViewCard(item);
+                }
+            });
+            doneContainer.innerHTML = doneHtml;
+        } else {
+            doneSection.style.display = 'none';
+            doneContainer.innerHTML = '';
+        }
+    }
 }
 
 function renderViewCard(item) {
@@ -461,10 +578,17 @@ function renderViewCard(item) {
     const typeIcon = item.type === 'ddl' ? 'calendar_month' : 'sticky_note_2';
     const typeText = item.type === 'ddl' ? t('typeDdl') : t('typeNote');
 
+    // Done items use flex layout, no absolute positioning
+    const isDone = item.done;
+    const cardStyle = isDone
+        ? `background: ${item.color};`
+        : `background: ${item.color}; left: ${pos.x}px; top: ${pos.y}px; z-index: ${zIndex};`;
+    const cardClass = isDone ? 'note-card done-card' : 'note-card';
+
     return `
-        <div class="note-card" data-id="${item.id}"
-             style="background: ${item.color}; left: ${pos.x}px; top: ${pos.y}px; z-index: ${zIndex};"
-             onmousedown="startDrag(event, ${item.id})" ontouchstart="startDrag(event, ${item.id})">
+        <div class="${cardClass}" data-id="${item.id}"
+             style="${cardStyle}"
+             ${!isDone ? `onmousedown="startDrag(event, ${item.id})" ontouchstart="startDrag(event, ${item.id})"` : ''}>
             <div class="note-header">
                 <div class="note-title">${item.title}</div>
                 <span class="priority-badge priority-${item.priority}">
@@ -481,6 +605,11 @@ function renderViewCard(item) {
                     ${typeText}
                 </span>
                 <div class="note-actions">
+                    ${!item.done ? `<button class="done-btn" onclick="markDone(${item.id})" title="${t('done')}">
+                        <span class="material-symbols-outlined">check_circle</span>
+                    </button>` : `<button class="undone-btn" onclick="undoMarkDone(${item.id})" title="${t('undone')}">
+                        <span class="material-symbols-outlined">undo</span>
+                    </button>`}
                     <button class="edit-btn" onclick="enterEditMode(${item.id})" title="Edit">
                         <span class="material-symbols-outlined">edit_note</span>
                     </button>

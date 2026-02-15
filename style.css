@@ -1011,6 +1011,134 @@ body::after {
     50% { transform: translateY(-20px); }
 }
 
+@keyframes fireworkBurst {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+
+@keyframes doneShrink {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+    100% { transform: scale(0); opacity: 0; }
+}
+
+/* =========================================
+   7b. Done Section & Fireworks
+   ========================================= */
+.done-section {
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 3px dashed var(--border-soft);
+}
+
+.done-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+.done-section-header .material-symbols-outlined {
+    font-size: 28px;
+    color: var(--success-text);
+}
+
+.done-section-header h2 {
+    font-family: 'Caveat', cursive;
+    font-size: 2rem;
+    color: var(--text-dark);
+    font-weight: 700;
+}
+
+.done-notes-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+    min-height: auto;
+}
+
+.done-notes-container .note-card,
+.done-card {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    cursor: default;
+    animation: none !important;
+}
+
+.done-notes-container .note-card {
+    opacity: 0.5;
+    filter: grayscale(0.4);
+    transition: opacity 0.3s, filter 0.3s;
+}
+
+.done-notes-container .note-card:hover {
+    opacity: 0.8;
+    filter: grayscale(0.1);
+    transform: none !important;
+    z-index: auto !important;
+}
+
+.done-btn {
+    width: 32px;
+    height: 32px;
+    border: 1.5px solid rgba(74, 63, 63, 0.15);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.3);
+    color: var(--success-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    padding: 0;
+}
+
+.done-btn:hover {
+    background-color: var(--success-text);
+    color: white;
+    border-color: var(--success-text);
+    transform: translateY(-2px);
+}
+
+.undone-btn {
+    width: 32px;
+    height: 32px;
+    border: 1.5px solid rgba(74, 63, 63, 0.15);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.3);
+    color: var(--warning);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    padding: 0;
+}
+
+.undone-btn:hover {
+    background-color: var(--warning);
+    color: white;
+    border-color: var(--warning);
+    transform: translateY(-2px);
+}
+
+.done-shrink {
+    animation: doneShrink 0.6s ease forwards;
+    pointer-events: none;
+}
+
+.firework-particle {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    animation: fireworkBurst 0.7s ease-out forwards;
+}
+
 /* =========================================
    8. Media Queries
    ========================================= */
@@ -1386,8 +1514,8 @@ body::after {
     width: 280px;
     padding: 25px;
     border-radius: 8px;
-    box-shadow: https://www.ini.uzh.ch/en/studies/student-projects.html
-        2px 2px 5px rgba(0, 0, 0, 0.1), 
+    box-shadow:
+        2px 2px 5px rgba(0, 0, 0, 0.1),
         5px 5px 15px var(--shadow);
     
     border: 1px solid rgba(0, 0, 0, 0.08);
