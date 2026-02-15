@@ -335,6 +335,31 @@ body::after {
     font-family: inherit;
 }
 
+.repeat-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    padding: 4px 8px;
+    border-radius: 5px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.5);
+    transition: all 0.2s;
+}
+
+.repeat-toggle:has(input:checked) {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.repeat-toggle input {
+    display: none;
+}
+
 /* Color Picker */
 .color-picker {
     display: grid;

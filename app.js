@@ -39,6 +39,7 @@ const translations = {
         icsImport: '导入ICS', icsNoEvents: '未找到日历事件',
         icsImported: '成功导入 {0} 个事件', recurring: '每周重复',
         clearExpired: '清除已过期', clearedCount: '已清除 {0} 个过期项', clearedNone: '没有过期项',
+        repeatWeekly: '每周重复',
     },
     en: {
         mainTitle: '📌 My DDL Wall 📌',
@@ -64,6 +65,7 @@ const translations = {
         icsImport: 'Import ICS', icsNoEvents: 'No calendar events found',
         icsImported: 'Successfully imported {0} event(s)', recurring: 'Weekly recurring',
         clearExpired: 'Clear Expired', clearedCount: 'Cleared {0} expired item(s)', clearedNone: 'No expired items',
+        repeatWeekly: 'Repeat weekly',
     }
 };
 
@@ -166,15 +168,34 @@ function saveNote(id) {
     const description = card.querySelector('.input-desc').value;
     const priority = card.querySelector('.input-priority').value;
     const deadline = card.querySelector('.input-deadline')?.value;
+    const repeatWeekly = card.querySelector('.input-repeat')?.checked || false;
     const color = card.style.backgroundColor;
     const tags = [...card.querySelectorAll('.tag-pills .note-tag')].map(el => el.firstChild.textContent.trim());
 
     if (!title) return alert("Please enter a title!");
 
+    // Build recurrence data
+    let recurrence = null;
+    if (repeatWeekly && deadline) {
+        const dt = new Date(deadline);
+        const dayNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+        recurrence = {
+            freq: 'WEEKLY',
+            byDay: dayNames[dt.getDay()],
+            originalDtstart: dt.toISOString(),
+            interval: 1
+        };
+    }
+
     let newItem;
     if (id) {
         newItem = items.find(i => i.id === id);
         Object.assign(newItem, { title, description, priority, color, deadline, tags, type: deadline ? 'ddl' : 'note' });
+        if (recurrence) {
+            newItem.recurrence = recurrence;
+        } else {
+            delete newItem.recurrence;
+        }
     } else {
         maxZIndex++;
         newItem = {
@@ -185,6 +206,9 @@ function saveNote(id) {
             zIndex: maxZIndex,
             position: { x: Math.min(100, window.innerWidth - 300), y: 100 }
         };
+        if (recurrence) {
+            newItem.recurrence = recurrence;
+        }
         items.unshift(newItem);
     }
 
@@ -490,6 +514,7 @@ function renderEditCard(item) {
     const color = isNew ? '#ffd4b8' : item.color;
     const deadline = isNew ? '' : (item.deadline || '');
     const tags = isNew ? [] : (item.tags || []);
+    const isRecurring = !isNew && !!item.recurrence;
     const pos = isNew ? { x: Math.min(100, window.innerWidth - 300), y: 10 } : item.position;
     const zIndex = isNew ? 9999 : (item.zIndex || 9999);
 
@@ -509,6 +534,11 @@ function renderEditCard(item) {
                     <option value="low" ${priority === 'low' ? 'selected' : ''}>${t('priorityLow')}</option>
                 </select>
                 <input type="datetime-local" class="input-deadline" value="${deadline}">
+                <label class="repeat-toggle">
+                    <input type="checkbox" class="input-repeat" ${isRecurring ? 'checked' : ''}>
+                    <span class="material-symbols-outlined" style="font-size:16px">repeat</span>
+                    ${t('repeatWeekly')}
+                </label>
             </div>
             <div class="tag-input-row">
                 <div class="tag-pills">${tagPills}</div>
@@ -627,6 +657,17 @@ function handleICSImport(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    const dayNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+    const dayTagMap = {
+        'MO': currentLang === 'zh' ? '周一' : 'Mon',
+        'TU': currentLang === 'zh' ? '周二' : 'Tue',
+        'WE': currentLang === 'zh' ? '周三' : 'Wed',
+        'TH': currentLang === 'zh' ? '周四' : 'Thu',
+        'FR': currentLang === 'zh' ? '周五' : 'Fri',
+        'SA': currentLang === 'zh' ? '周六' : 'Sat',
+        'SU': currentLang === 'zh' ? '周日' : 'Sun'
+    };
+
     const reader = new FileReader();
     reader.onload = function (e) {
         const text = e.target.result;
@@ -637,65 +678,134 @@ function handleICSImport(event) {
             return;
         }
 
-        let imported = 0;
+        // Separate: events with explicit RRULE vs plain events
+        const rruleEvents = [];
+        const plainEvents = [];
         events.forEach(ev => {
             if (!ev.summary) return;
-
-            const tags = ['ics-import'];
-            let recurrence = null;
-            let deadline = ev.dtstart || ev.dtend || '';
-
             if (ev.rrule && ev.rrule.FREQ === 'WEEKLY') {
-                const dtstart = new Date(deadline);
-                const dayNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-                const byDay = (ev.rrule.BYDAY || dayNames[dtstart.getDay()]).split(',')[0];
-
-                recurrence = {
-                    freq: 'WEEKLY',
-                    byDay: byDay,
-                    originalDtstart: deadline,
-                    interval: parseInt(ev.rrule.INTERVAL) || 1
-                };
-
-                const dayTagMap = {
-                    'MO': currentLang === 'zh' ? '周一' : 'Mon',
-                    'TU': currentLang === 'zh' ? '周二' : 'Tue',
-                    'WE': currentLang === 'zh' ? '周三' : 'Wed',
-                    'TH': currentLang === 'zh' ? '周四' : 'Thu',
-                    'FR': currentLang === 'zh' ? '周五' : 'Fri',
-                    'SA': currentLang === 'zh' ? '周六' : 'Sat',
-                    'SU': currentLang === 'zh' ? '周日' : 'Sun'
-                };
-                tags.push(dayTagMap[byDay] || byDay);
-
-                deadline = getNextOccurrence(recurrence, deadline);
-            } else if (deadline && new Date(deadline) < new Date()) {
-                // Skip expired non-recurring events
-                return;
+                rruleEvents.push(ev);
+            } else {
+                plainEvents.push(ev);
             }
+        });
+
+        // Auto-detect weekly patterns in plain events:
+        // Group by "summary | dayOfWeek | HH:MM"
+        const groups = {};
+        plainEvents.forEach(ev => {
+            const deadline = ev.dtstart || ev.dtend || '';
+            if (!deadline) return;
+            const dt = new Date(deadline);
+            const day = dayNames[dt.getDay()];
+            const time = dt.getHours().toString().padStart(2, '0') + ':' + dt.getMinutes().toString().padStart(2, '0');
+            const key = `${ev.summary}|${day}|${time}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(ev);
+        });
+
+        let imported = 0;
+
+        // Import explicit RRULE weekly events
+        rruleEvents.forEach(ev => {
+            const deadline = ev.dtstart || ev.dtend || '';
+            const dtstart = new Date(deadline);
+            const byDay = (ev.rrule.BYDAY || dayNames[dtstart.getDay()]).split(',')[0];
+
+            const recurrence = {
+                freq: 'WEEKLY',
+                byDay: byDay,
+                originalDtstart: deadline,
+                interval: parseInt(ev.rrule.INTERVAL) || 1
+            };
+
+            const tags = ['ics-import', dayTagMap[byDay] || byDay];
+            const nextDeadline = getNextOccurrence(recurrence, deadline);
 
             maxZIndex++;
-            const newItem = {
+            items.unshift({
                 id: Date.now() + imported,
                 type: 'ddl',
                 title: ev.summary,
                 description: ev.description || '',
                 priority: 'medium',
                 color: '#c8e4ff',
-                deadline: deadline,
+                deadline: nextDeadline,
                 tags: tags,
                 createdAt: new Date().toISOString(),
                 zIndex: maxZIndex,
-                position: { x: Math.min(100 + imported * 30, window.innerWidth - 300), y: 100 + imported * 30 }
-            };
-
-            if (recurrence) {
-                newItem.recurrence = recurrence;
-            }
-
-            items.unshift(newItem);
+                position: { x: Math.min(100 + imported * 30, window.innerWidth - 300), y: 100 + imported * 30 },
+                recurrence: recurrence
+            });
             imported++;
         });
+
+        // Import grouped plain events
+        const now = new Date();
+        for (const key in groups) {
+            const group = groups[key];
+            const [summary, day] = key.split('|');
+            const firstEv = group[0];
+            const deadline = firstEv.dtstart || firstEv.dtend || '';
+
+            if (group.length >= 2) {
+                // Auto-detected weekly pattern → merge into one recurring note
+                // Pick the earliest event as originalDtstart
+                const earliest = group.reduce((a, b) => {
+                    const da = new Date(a.dtstart || a.dtend);
+                    const db = new Date(b.dtstart || b.dtend);
+                    return da < db ? a : b;
+                });
+                const originalDtstart = earliest.dtstart || earliest.dtend;
+
+                const recurrence = {
+                    freq: 'WEEKLY',
+                    byDay: day,
+                    originalDtstart: originalDtstart,
+                    interval: 1
+                };
+
+                const tags = ['ics-import', dayTagMap[day] || day];
+                const nextDeadline = getNextOccurrence(recurrence, originalDtstart);
+                const desc = firstEv.description || '';
+
+                maxZIndex++;
+                items.unshift({
+                    id: Date.now() + imported,
+                    type: 'ddl',
+                    title: summary,
+                    description: desc,
+                    priority: 'medium',
+                    color: '#c8e4ff',
+                    deadline: nextDeadline,
+                    tags: tags,
+                    createdAt: new Date().toISOString(),
+                    zIndex: maxZIndex,
+                    position: { x: Math.min(100 + imported * 30, window.innerWidth - 300), y: 100 + imported * 30 },
+                    recurrence: recurrence
+                });
+                imported++;
+            } else {
+                // Single occurrence, import as normal (skip if expired)
+                if (deadline && new Date(deadline) < now) return;
+
+                maxZIndex++;
+                items.unshift({
+                    id: Date.now() + imported,
+                    type: 'ddl',
+                    title: summary,
+                    description: firstEv.description || '',
+                    priority: 'medium',
+                    color: '#c8e4ff',
+                    deadline: deadline,
+                    tags: ['ics-import'],
+                    createdAt: new Date().toISOString(),
+                    zIndex: maxZIndex,
+                    position: { x: Math.min(100 + imported * 30, window.innerWidth - 300), y: 100 + imported * 30 }
+                });
+                imported++;
+            }
+        }
 
         localStorage.setItem('ddlItems', JSON.stringify(items));
         renderItems();
